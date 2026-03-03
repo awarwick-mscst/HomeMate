@@ -14,7 +14,7 @@ def extract_text_from_pdf(pdf_path):
         print(f"Error extracting PDF text: {e}")
         return None
 
-def query_ollama(prompt, context, model="llama3.2", ollama_url="http://10.0.0.55:11434"):
+def query_ollama(prompt, context, model="llama3.2", ollama_url="http://192.168.1.111:11434"):
     """
     Send a prompt + context to local Ollama instance.
     Adjust ollama_url if your AI server is at a different IP.
