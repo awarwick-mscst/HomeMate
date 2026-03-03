@@ -157,4 +157,10 @@ class HomeTaskHistory(db.Model):
     def __repr__(self):
         return f'<HomeTaskHistory {self.id}>'
 
+class Home(db.Model):
+    """Single home/address for the household."""
+    id = db.Column(db.Integer, primary_key=True)
+    address = db.Column(db.Text)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 from datetime import timedelta

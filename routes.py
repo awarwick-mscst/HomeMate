@@ -1,6 +1,6 @@
 from app import app, db
 from flask import render_template, request, redirect, url_for, flash, jsonify, send_from_directory
-from models import Appliance, Maintenance, Manual, Vehicle, VehicleMaintenance, HomeTask, HomeTaskHistory
+from models import Appliance, Maintenance, Manual, Vehicle, VehicleMaintenance, HomeTask, HomeTaskHistory, Home
 from datetime import datetime, date, timedelta
 import os
 from ai_helper import extract_text_from_pdf, query_ollama
@@ -12,6 +12,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # --- Dashboard ---
 @app.route('/')
 def index():
+    home = Home.query.first()
     appliances = Appliance.query.all()
     vehicles = Vehicle.query.all()
     home_tasks = HomeTask.query.all()
@@ -39,12 +40,25 @@ def index():
             predictions.append({'item': v, 'type': 'vehicle', **pred})
     
     return render_template('index.html', 
+                         home=home,
                          appliances=appliances, 
                          vehicles=vehicles,
                          home_tasks=home_tasks,
                          upcoming_tasks=upcoming_tasks,
                          overdue_tasks=overdue_tasks,
                          predictions=predictions)
+
+# --- Home Settings ---
+@app.route('/home/update', methods=['POST'])
+def update_home():
+    home = Home.query.first()
+    if not home:
+        home = Home()
+        db.session.add(home)
+    home.address = request.form.get('address')
+    db.session.commit()
+    flash('Address saved!', 'success')
+    return redirect(url_for('index'))
 
 # --- Appliances ---
 @app.route('/appliances')
