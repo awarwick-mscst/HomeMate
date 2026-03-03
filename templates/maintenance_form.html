@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{% if maintenance %}Edit Maintenance{% else %}Add Maintenance{% endblock %}
+{% block title %}{% if maintenance %}Edit Maintenance{% else %}Add Maintenance{% endif %}{% endblock %}
 
 {% block content %}
 <h1>{% if maintenance %}Edit Maintenance{% else %}Add Maintenance{% endif %} for {{ appliance.name }}</h1>
