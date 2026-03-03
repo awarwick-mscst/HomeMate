@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Appliances - HomeMate{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-house-gear"></i> Appliances</h1>
+    <a href="{{ url_for('add_appliance') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Appliance</a>
+</div>
+
+{% if appliances %}
+<div class="row">
+    {% for appliance in appliances %}
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ appliance.name }}</h5>
+                <p class="card-text text-muted">
+                    {% if appliance.model %}<i class="bi bi-tag"></i> {{ appliance.model }}<br>{% endif %}
+                    {% if appliance.location %}<i class="bi bi-geo-alt"></i> {{ appliance.location }}<br>{% endif %}
+                    {% if appliance.warranty_expiry %}
+                        {% if appliance.warranty_expiry > date.today() %}
+                            <span class="text-success"><i class="bi bi-shield-check"></i> Warranty: {{ appliance.warranty_expiry }}</span>
+                        {% else %}
+                            <span class="text-danger"><i class="bi bi-shield-exclamation"></i> Warranty expired</span>
+                        {% endif %}
+                    {% endif %}
+                </p>
+                <a href="{{ url_for('view_appliance', id=appliance.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">No appliances yet. <a href="{{ url_for('add_appliance') }}">Add your first one!</a></div>
+{% endif %}
+{% endblock %}

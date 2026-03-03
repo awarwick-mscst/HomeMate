@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - HomeMate{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-house-heart"></i> HomeMate Dashboard</h1>
+
+<!-- Predictions -->
+{% if predictions %}
+<div class="card mb-4 border-warning">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Upcoming Maintenance Predictions</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+        {% for pred in predictions %}
+            <div class="col-md-6 col-lg-4 mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ pred.item.name }}</strong>
+                        <small class="text-muted d-block">{{ 'Appliance' if pred.type == 'appliance' else 'Vehicle' }}</small>
+                    </div>
+                    <div class="text-end">
+                        {% if pred.days_until <= 0 %}
+                            <span class="badge bg-danger">Overdue</span>
+                        {% elif pred.days_until <= 7 %}
+                            <span class="badge bg-warning text-dark">Due soon</span>
+                        {% else %}
+                            <span class="badge bg-info">{{ pred.days_until }} days</span>
+                        {% endif %}
+                        <small class="text-muted d-block">Every ~{{ pred.avg_interval_days }} days</small>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Overdue Tasks -->
+    {% if overdue_tasks %}
+    <div class="col-lg-4 mb-4">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-circle"></i> Overdue Tasks</h5>
+            </div>
+            <div class="card-body">
+                {% for task in overdue_tasks %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <strong>{{ task.name }}</strong>
+                        <small class="text-muted d-block">{{ task.location or '' }}</small>
+                    </div>
+                    <form method="POST" action="{{ url_for('complete_home_task', id=task.id) }}">
+                        <button type="submit" class="btn btn-sm btn-outline-success">Done</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Upcoming Tasks -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Upcoming This Week</h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_tasks %}
+                    {% for task in upcoming_tasks %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>{{ task.name }}</strong>
+                            <small class="text-muted d-block">{{ task.next_due }}</small>
+                        </div>
+                        <form method="POST" action="{{ url_for('complete_home_task', id=task.id) }}">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Done</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No tasks due this week.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Quick Stats</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Appliances:</strong> {{ appliances|length }}</p>
+                <p><strong>Vehicles:</strong> {{ vehicles|length }}</p>
+                <p><strong>Home Tasks:</strong> {{ home_tasks|length }}</p>
+                <a href="{{ url_for('home_tasks') }}" class="btn btn-sm btn-outline-primary">Manage Tasks</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-house-gear display-4 text-primary"></i>
+                <h5 class="card-title mt-2">Appliances</h5>
+                <p class="card-text">{{ appliances|length }} tracked</p>
+                <a href="{{ url_for('appliances') }}" class="btn btn-primary">View</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-car-front display-4 text-success"></i>
+                <h5 class="card-title mt-2">Vehicles</h5>
+                <p class="card-text">{{ vehicles|length }} tracked</p>
+                <a href="{{ url_for('vehicles') }}" class="btn btn-success">View</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-clipboard-check display-4 text-warning"></i>
+                <h5 class="card-title mt-2">Home Tasks</h5>
+                <p class="card-text">{{ home_tasks|length }} tasks</p>
+                <a href="{{ url_for('home_tasks') }}" class="btn btn-warning">View</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

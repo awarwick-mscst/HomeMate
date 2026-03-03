@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{% if task %}Edit Home Task{% else %}Add Home Task{% endblock %}
+
+{% block content %}
+<h1>{% if task %}Edit Home Task{% else %}Add Home Task{% endif %}</h1>
+
+<form method="POST">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Task Name *</label>
+            <input type="text" name="name" class="form-control" value="{{ task.name if task else '' }}" required placeholder="e.g., Clean gutters">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Location</label>
+            <input type="text" name="location" class="form-control" value="{{ task.location if task else '' }}" placeholder="e.g., Outside, Garage">
+        </div>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-control" rows="2" placeholder="Optional details...">{{ task.description if task else '' }}</textarea>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Frequency (days)</label>
+            <input type="number" name="frequency_days" class="form-control" value="{{ task.frequency_days if task else '' }}" placeholder="Leave empty for one-time">
+            <small class="text-muted">e.g., 30 for monthly, 90 for quarterly, 365 for yearly</small>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Last Completed</label>
+            <input type="date" name="last_completed" class="form-control" value="{{ task.last_completed if task else '' }}">
+        </div>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-control" rows="2">{{ task.notes if task else '' }}</textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{{ url_for('home_tasks') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

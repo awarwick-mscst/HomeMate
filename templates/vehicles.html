@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Vehicles - HomeMate{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-car-front"></i> Vehicles</h1>
+    <a href="{{ url_for('add_vehicle') }}" class="btn btn-success"><i class="bi bi-plus-lg"></i> Add Vehicle</a>
+</div>
+
+{% if vehicles %}
+<div class="row">
+    {% for vehicle in vehicles %}
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card h-100 border-success">
+            <div class="card-body">
+                <h5 class="card-title">{{ vehicle.name }}</h5>
+                <p class="card-text text-muted">
+                    {% if vehicle.year %}{{ vehicle.year }} {% endif %}{{ vehicle.make }} {{ vehicle.model }}<br>
+                    {% if vehicle.current_mileage %}<i class="bi bi-speedometer"></i> {{ vehicle.current_mileage|int }} mi<br>{% endif %}
+                    {% if vehicle.license_plate %}<i class="bi bi-card-text"></i> {{ vehicle.license_plate }}{% endif %}
+                </p>
+                <a href="{{ url_for('view_vehicle', id=vehicle.id) }}" class="btn btn-sm btn-outline-success">View Details</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">No vehicles yet. <a href="{{ url_for('add_vehicle') }}">Add your first one!</a></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{% if vehicle %}Edit Vehicle{% else %}Add Vehicle{% endblock %}
+
+{% block content %}
+<h1>{% if vehicle %}Edit Vehicle{% else %}Add Vehicle{% endif %}</h1>
+
+<form method="POST">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Name *</label>
+            <input type="text" name="name" class="form-control" value="{{ vehicle.name if vehicle else '' }}" required placeholder="e.g., 2020 Honda Civic">
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label">Year</label>
+            <input type="number" name="year" class="form-control" value="{{ vehicle.year if vehicle else '' }}" placeholder="2020">
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label">Current Mileage</label>
+            <input type="number" name="current_mileage" class="form-control" value="{{ vehicle.current_mileage if vehicle else '' }}">
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Make</label>
+            <input type="text" name="make" class="form-control" value="{{ vehicle.make if vehicle else '' }}" placeholder="Honda">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Model</label>
+            <input type="text" name="model" class="form-control" value="{{ vehicle.model if vehicle else '' }}" placeholder="Civic">
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">VIN</label>
+            <input type="text" name="vin" class="form-control" value="{{ vehicle.vin if vehicle else '' }}">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">License Plate</label>
+            <input type="text" name="license_plate" class="form-control" value="{{ vehicle.license_plate if vehicle else '' }}">
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Purchase Date</label>
+            <input type="date" name="purchase_date" class="form-control" value="{{ vehicle.purchase_date if vehicle else '' }}">
+        </div>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-control" rows="3">{{ vehicle.notes if vehicle else '' }}</textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{{ url_for('vehicles') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

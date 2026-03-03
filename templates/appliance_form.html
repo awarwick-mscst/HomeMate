@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}{% if appliance %}Edit Appliance{% else %}Add Appliance{% endif %}{% endblock %}
+
+{% block content %}
+<h1>{% if appliance %}Edit Appliance{% else %}Add Appliance{% endif %}</h1>
+
+<form method="POST">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Name *</label>
+            <input type="text" name="name" class="form-control" value="{{ appliance.name if appliance else '' }}" required>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Model</label>
+            <input type="text" name="model" class="form-control" value="{{ appliance.model if appliance else '' }}">
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Serial Number</label>
+            <input type="text" name="serial_number" class="form-control" value="{{ appliance.serial_number if appliance else '' }}">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Location</label>
+            <input type="text" name="location" class="form-control" value="{{ appliance.location if appliance else '' }}" placeholder="e.g., Kitchen, Garage">
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Purchase Date</label>
+            <input type="date" name="purchase_date" class="form-control" value="{{ appliance.purchase_date if appliance else '' }}">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Warranty Expiry</label>
+            <input type="date" name="warranty_expiry" class="form-control" value="{{ appliance.warranty_expiry if appliance else '' }}">
+        </div>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Manual URL</label>
+        <input type="url" name="manual_url" class="form-control" value="{{ appliance.manual_url if appliance else '' }}" placeholder="https://example.com/manual.pdf">
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-control" rows="3">{{ appliance.notes if appliance else '' }}</textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

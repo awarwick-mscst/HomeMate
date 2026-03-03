@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{% if maintenance %}Edit Maintenance{% else %}Add Maintenance{% endblock %}
+
+{% block content %}
+<h1>{% if maintenance %}Edit Maintenance{% else %}Add Maintenance{% endif %} for {{ appliance.name }}</h1>
+
+<form method="POST">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Date *</label>
+            <input type="date" name="date" class="form-control" value="{{ maintenance.date if maintenance else '' }}" required>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Cost</label>
+            <input type="number" name="cost" class="form-control" value="{{ maintenance.cost if maintenance else '0' }}" step="0.01" min="0">
+        </div>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Description *</label>
+        <textarea name="description" class="form-control" rows="3" required>{{ maintenance.description if maintenance else '' }}</textarea>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Parts Used</label>
+            <input type="text" name="parts" class="form-control" value="{{ maintenance.parts if maintenance else '' }}" placeholder="e.g., Oil filter, air filter">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Performed By</label>
+            <input type="text" name="performed_by" class="form-control" value="{{ maintenance.performed_by if maintenance else '' }}" placeholder="e.g., Self, HVAC tech">
+        </div>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{{ url_for('view_appliance', id=appliance.id) }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

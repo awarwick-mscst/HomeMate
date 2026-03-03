@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}{{ appliance.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>{{ appliance.name }}</h1>
+    <div>
+        <a href="{{ url_for('edit_appliance', id=appliance.id) }}" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>
+        <form method="POST" action="{{ url_for('delete_appliance', id=appliance.id) }}" class="d-inline" onsubmit="return confirm('Delete this appliance?');">
+            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0">Details</h5></div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr><th>Model:</th><td>{{ appliance.model or '-' }}</td></tr>
+                    <tr><th>Serial #:</th><td>{{ appliance.serial_number or '-' }}</td></tr>
+                    <tr><th>Location:</th><td>{{ appliance.location or '-' }}</td></tr>
+                    <tr><th>Purchase Date:</th><td>{{ appliance.purchase_date or '-' }}</td></tr>
+                    <tr><th>Warranty:</th><td>
+                        {% if appliance.warranty_expiry %}
+                            {% if appliance.warranty_expiry > date.today() %}
+                                <span class="badge bg-success">{{ appliance.warranty_expiry }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">Expired: {{ appliance.warranty_expiry }}</span>
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td></tr>
+                </table>
+                
+                {% if appliance.manual_url %}
+                <a href="{{ appliance.manual_url }}" target="_blank" class="btn btn-primary"><i class="bi bi-file-earmark-pdf"></i> View Manual (URL)</a>
+                {% endif %}
+                
+                {% if appliance.notes %}
+                <h6 class="mt-3">Notes</h6>
+                <p class="text-muted">{{ appliance.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Manuals Section -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Manuals</h5>
+            </div>
+            <div class="card-body">
+                <!-- Upload Form -->
+                <form method="POST" action="{{ url_for('upload_manual', id=appliance.id) }}" enctype="multipart/form-data" class="mb-3">
+                    <div class="input-group">
+                        <input type="file" name="file" class="form-control" accept=".pdf" required>
+                        <button type="submit" class="btn btn-outline-primary">Upload PDF</button>
+                    </div>
+                    <small class="text-muted">Upload PDF manuals for AI-powered Q&A</small>
+                </form>
+                
+                <!-- Manual List -->
+                {% if appliance.manuals %}
+                    <div class="list-group list-group-flush">
+                    {% for manual in appliance.manuals %}
+                        <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-file-earmark-pdf text-danger"></i>
+                                <a href="{{ url_for('serve_manual', filename=manual.filename) }}" target="_blank">{{ manual.original_name }}</a>
+                                <small class="text-muted">({{ manual.uploaded_at.strftime('%Y-%m-%d') }})</small>
+                            </div>
+                            <form method="POST" action="{{ url_for('delete_manual', id=appliance.id, manual_id=manual.id) }}" class="d-inline" onsubmit="return confirm('Delete this manual?');">
+                                <button type="submit" class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No manuals uploaded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- AI Q&A Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-robot"></i> Ask AI About This Appliance</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Ask questions about this appliance, its manuals, or maintenance history.</p>
+                <form id="ai-ask-form">
+                    <div class="input-group">
+                        <input type="text" name="question" class="form-control" placeholder="e.g., How do I replace the filter?" required>
+                        <button type="submit" class="btn btn-primary" id="ask-btn">Ask</button>
+                    </div>
+                </form>
+                <div id="ai-response" class="mt-3" style="display: none;">
+                    <div class="alert alert-info">
+                        <strong>Question:</strong> <span id="question-text"></span><br><br>
+                        <strong>Answer:</strong> <span id="answer-text"></span>
+                    </div>
+                </div>
+                <div id="ai-loading" class="mt-3" style="display: none;">
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                    <span class="text-muted">Thinking...</span>
+                </div>
+                <div id="ai-error" class="mt-3" style="display: none;">
+                    <div class="alert alert-danger" id="error-text"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Maintenance History</h5>
+                <a href="{{ url_for('add_maintenance', id=appliance.id) }}" class="btn btn-sm btn-primary">Add Record</a>
+            </div>
+            <div class="card-body">
+                {% if appliance.maintenance_records %}
+                    <div class="list-group list-group-flush">
+                    {% for record in appliance.maintenance_records|sort(attribute='date', reverse=true) %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ record.date }}</strong>
+                                {% if record.cost > 0 %}<span class="badge bg-secondary">${{ "%.2f"|format(record.cost) }}</span>{% endif %}
+                            </div>
+                            <p class="mb-1">{{ record.description }}</p>
+                            {% if record.parts %}<small class="text-muted">Parts: {{ record.parts }}</small><br>{% endif %}
+                            {% if record.performed_by %}<small class="text-muted">By: {{ record.performed_by }}</small>{% endif %}
+                            <div class="mt-1">
+                                <a href="{{ url_for('edit_maintenance', id=record.id) }}" class="btn btn-sm btn-link">Edit</a>
+                                <form method="POST" action="{{ url_for('delete_maintenance', id=record.id) }}" class="d-inline" onsubmit="return confirm('Delete this record?');">
+                                    <button type="submit" class="btn btn-sm btn-link text-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No maintenance records yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<a href="{{ url_for('index') }}">&larr; Back to appliances</a>
+
+<script>
+document.getElementById('ai-ask-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const question = formData.get('question');
+    
+    document.getElementById('ai-response').style.display = 'none';
+    document.getElementById('ai-error').style.display = 'none';
+    document.getElementById('ai-loading').style.display = 'block';
+    document.getElementById('ask-btn').disabled = true;
+    
+    try {
+        const response = await fetch("{{ url_for('ask_about_appliance', id=appliance.id) }}", {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        document.getElementById('ai-loading').style.display = 'none';
+        
+        if (response.ok) {
+            document.getElementById('question-text').textContent = data.question;
+            document.getElementById('answer-text').textContent = data.answer;
+            document.getElementById('ai-response').style.display = 'block';
+        } else {
+            document.getElementById('error-text').textContent = data.error || 'An error occurred';
+            document.getElementById('ai-error').style.display = 'block';
+        }
+    } catch (err) {
+        document.getElementById('ai-loading').style.display = 'none';
+        document.getElementById('error-text').textContent = 'Failed to connect to AI server';
+        document.getElementById('ai-error').style.display = 'block';
+    }
+    
+    document.getElementById('ask-btn').disabled = false;
+});
+</script>
+{% endblock %}

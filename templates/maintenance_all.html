@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}All Maintenance - HomeMate{% endblock %}
+
+{% block content %}
+<h1>All Maintenance Records</h1>
+
+<h4>Appliances</h4>
+{% if app_records %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Appliance</th>
+            <th>Description</th>
+            <th>Cost</th>
+            <th>By</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in app_records|sort(attribute='date', reverse=true) %}
+        <tr>
+            <td>{{ record.date }}</td>
+            <td><a href="{{ url_for('view_appliance', id=record.appliance_id) }}">{{ record.appliance.name }}</a></td>
+            <td>{{ record.description }}</td>
+            <td>{% if record.cost > 0 %}${{ "%.2f"|format(record.cost) }}{% else %}-{% endif %}</td>
+            <td>{{ record.performed_by or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted">No appliance maintenance records.</p>
+{% endif %}
+
+<h4 class="mt-4">Vehicles</h4>
+{% if veh_records %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Vehicle</th>
+            <th>Mileage</th>
+            <th>Description</th>
+            <th>Cost</th>
+            <th>By</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in veh_records|sort(attribute='date', reverse=true) %}
+        <tr>
+            <td>{{ record.date }}</td>
+            <td><a href="{{ url_for('view_vehicle', id=record.vehicle_id) }}">{{ record.vehicle.name }}</a></td>
+            <td>{{ record.mileage|int if record.mileage else '-' }}</td>
+            <td>{{ record.description }}</td>
+            <td>{% if record.cost > 0 %}${{ "%.2f"|format(record.cost) }}{% else %}-{% endif %}</td>
+            <td>{{ record.performed_by or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted">No vehicle maintenance records.</p>
+{% endif %}
+
+<a href="{{ url_for('index') }}">&larr; Back to dashboard</a>
+{% endblock %}

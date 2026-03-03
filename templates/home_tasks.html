@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Home Tasks - HomeMate{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-clipboard-check"></i> Home Tasks</h1>
+    <a href="{{ url_for('add_home_task') }}" class="btn btn-warning"><i class="bi bi-plus-lg"></i> Add Task</a>
+</div>
+
+{% if tasks %}
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Task</th>
+                <th>Location</th>
+                <th>Frequency</th>
+                <th>Last Completed</th>
+                <th>Next Due</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td>
+                    <strong>{{ task.name }}</strong>
+                    {% if task.description %}<br><small class="text-muted">{{ task.description }}</small>{% endif %}
+                </td>
+                <td>{{ task.location or '-' }}</td>
+                <td>
+                    {% if task.frequency_days %}
+                        Every {{ task.frequency_days }} days
+                    {% else %}
+                        One-time
+                    {% endif %}
+                </td>
+                <td>{{ task.last_completed or '-' }}</td>
+                <td>{{ task.next_due or '-' }}</td>
+                <td>
+                    {% if task.next_due and task.next_due < date.today() %}
+                        <span class="badge bg-danger">Overdue</span>
+                    {% elif task.next_due and task.next_due <= date.today() + timedelta(days=7) %}
+                        <span class="badge bg-warning">Due Soon</span>
+                    {% else %}
+                        <span class="badge bg-success">OK</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('complete_home_task', id=task.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-success">Done</button>
+                    </form>
+                    <a href="{{ url_for('view_home_task', id=task.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">No home tasks yet. <a href="{{ url_for('add_home_task') }}">Add your first one!</a></div>
+{% endif %}
+{% endblock %}
