@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeMate OBD2</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d6efd">
+    <style>
+        body { background-color: #f5f5f5; }
+        .status-connected { color: #198754; }
+        .status-disconnected { color: #dc3545; }
+        .status-reading { color: #ffc107; }
+        .metric-card { 
+            background: white; 
+            border-radius: 10px; 
+            padding: 15px; 
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .metric-value { font-size: 2em; font-weight: bold; }
+        .metric-label { color: #6c757d; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <h1 class="mb-4"><i class="bi bi-car-front"></i> HomeMate OBD2</h1>
+        
+        <!-- Connection -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Connection</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Server URL</label>
+                    <input type="text" id="serverUrl" class="form-control" value="https://obd2.machome.us" placeholder="https://obd2.machome.us">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Vehicle ID</label>
+                    <input type="number" id="vehicleId" class="form-control" value="1" placeholder="Vehicle ID from HomeMate">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">OBD2 Device</label>
+                    <select id="deviceSelect" class="form-select">
+                        <option value="">Scan for devices...</option>
+                    </select>
+                </div>
+                <button id="scanBtn" class="btn btn-primary w-100 mb-2">Scan for OBD2</button>
+                <button id="connectBtn" class="btn btn-success w-100" disabled>Connect</button>
+            </div>
+        </div>
+        
+        <!-- Status -->
+        <div id="status" class="alert alert-secondary">
+            Status: <span class="status-disconnected">Disconnected</span>
+        </div>
+        
+        <!-- Metrics -->
+        <div id="metrics" style="display: none;">
+            <h4 class="mb-3">Live Metrics</h4>
+            
+            <div class="row">
+                <div class="col-6">
+                    <div class="metric-card">
+                        <div class="metric-value" id="rpm">--</div>
+                        <div class="metric-label">RPM</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="metric-card">
+                        <div class="metric-value" id="speed">--</div>
+                        <div class="metric-label">MPH</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-6">
+                    <div class="metric-card">
+                        <div class="metric-value" id="coolant">--</div>
+                        <div class="metric-label">Coolant (°F)</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="metric-card">
+                        <div class="metric-value" id="throttle">--</div>
+                        <div class="metric-label">Throttle %</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-6">
+                    <div class="metric-card">
+                        <div class="metric-value" id="fuel">--</div>
+                        <div class="metric-label">Fuel Level %</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="metric-card">
+                        <div class="metric-value" id="battery">--</div>
+                        <div class="metric-label">Battery (V)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-value" id="dtc">--</div>
+                <div class="metric-label">Error Codes (DTC)</div>
+            </div>
+            
+            <button id="readBtn" class="btn btn-primary w-100 mb-2">Read All</button>
+            <button id="sendBtn" class="btn btn-success w-100 mb-2">Send to Server</button>
+            <button id="autoBtn" class="btn btn-warning w-100 mb-2">Start Auto-Send</button>
+            <button id="stopBtn" class="btn btn-danger w-100" style="display:none;">Stop Auto-Send</button>
+        </div>
+        
+        <!-- Log -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Log</h5>
+            </div>
+            <div class="card-body">
+                <pre id="log" style="height: 200px; overflow-y: auto; font-size: 0.8em;"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let device = null;
+        let characteristic = null;
+        let autoInterval = null;
+        
+        const logEl = document.getElementById('log');
+        const statusEl = document.getElementById('status');
+        
+        function log(msg) {
+            const time = new Date().toLocaleTimeString();
+            logEl.textContent += `[${time}] ${msg}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        function setStatus(status, color) {
+            statusEl.innerHTML = `Status: <span class="${color}">${status}</span>`;
+        }
+        
+        // Scan for Bluetooth devices
+        document.getElementById('scanBtn').addEventListener('click', async () => {
+            try {
+                log('Scanning for OBD2 devices...');
+                const devices = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: ['0000fff0-0000-1000-8000-00805f9b34fb'] }],
+                    optionalServices: ['0000fff0-0000-1000-8000-00805f9b34fb']
+                });
+                
+                device = devices;
+                log(`Found: ${device.name}`);
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').textContent = `Connect to ${device.name}`;
+            } catch (e) {
+                log(`Error: ${e.message}`);
+                alert('Make sure Bluetooth is on and you selected the OBD2 device');
+            }
+        });
+        
+        // Connect to device
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            try {
+                log('Connecting...');
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('0000fff0-0000-1000-8000-00805f9b34fb');
+                characteristic = await service.getCharacteristic('0000fff1-0000-1000-8000-00805f9b34fb');
+                
+                // Start notifications
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', handleData);
+                
+                setStatus('Connected', 'status-connected');
+                document.getElementById('metrics').style.display = 'block';
+                log('Connected!');
+                
+                // Initialize OBD
+                await sendCommand('ATZ');  // Reset
+                await sendCommand('ATE0');  // Echo off
+                await sendCommand('ATL0');  // Line feeds off
+                await sendCommand('ATS0');  // Spaces off
+                await sendCommand('ATH1');  // Headers on
+                await sendCommand('ATSP0');  // Auto protocol
+                
+                log('OBD initialized');
+            } catch (e) {
+                log(`Connect error: ${e.message}`);
+            }
+        });
+        
+        async function sendCommand(cmd) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(cmd + '\r');
+            await characteristic.writeValue(data);
+            await new Promise(r => setTimeout(r, 500));
+        }
+        
+        function handleData(event) {
+            const decoder = new TextDecoder();
+            const data = decoder.decode(event.target.value);
+            log(`RX: ${data.trim()}`);
+        }
+        
+        // Read all metrics
+        document.getElementById('readBtn').addEventListener('click', async () => {
+            if (!characteristic) return;
+            
+            log('Reading metrics...');
+            setStatus('Reading...', 'status-reading');
+            
+            const metrics = {};
+            
+            // RPM
+            await sendCommand('010C');
+            await new Promise(r => setTimeout(r, 300));
+            
+            // Speed
+            await sendCommand('010D');
+            await new Promise(r => setTimeout(r, 300));
+            
+            // Coolant
+            await sendCommand('0105');
+            await new Promise(r => setTimeout(r, 300));
+            
+            // Throttle
+            await sendCommand('0111');
+            await new Promise(r => setTimeout(r, 300));
+            
+            // Fuel
+            await sendCommand('012F');
+            await new Promise(r => setTimeout(r, 300));
+            
+            // Battery
+            await sendCommand('ATRV');
+            await new Promise(r => setTimeout(r, 300));
+            
+            // DTCs
+            await sendCommand('03');
+            await new Promise(r => setTimeout(r, 300));
+            
+            setStatus('Connected', 'status-connected');
+        });
+        
+        // Send to server
+        document.getElementById('sendBtn').addEventListener('click', async () => {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const vehicleId = document.getElementById('vehicleId').value;
+            
+            const data = {
+                vehicle_id: parseInt(vehicleId),
+                rpm: Math.floor(Math.random() * 3000),  // Placeholder
+                speed: Math.floor(Math.random() * 70),
+                coolant_temp: Math.floor(180 + Math.random() * 40),
+                throttle: Math.floor(Math.random() * 100),
+                fuel_level: Math.floor(Math.random() * 100),
+                battery_voltage: 12.4 + Math.random() * 0.8,
+                dtc_codes: '',
+                timestamp: new Date().toISOString()
+            };
+            
+            try {
+                log('Sending to server...');
+                const response = await fetch(`${serverUrl}/api/vehicle/${vehicleId}/telemetry`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    log('Data sent successfully!');
+                    alert('Data sent to HomeMate!');
+                } else {
+                    log(`Server error: ${response.status}`);
+                }
+            } catch (e) {
+                log(`Error: ${e.message}`);
+            }
+        });
+        
+        // Auto-send
+        document.getElementById('autoBtn').addEventListener('click', () => {
+            autoInterval = setInterval(() => {
+                document.getElementById('sendBtn').click();
+            }, 30000);  // Every 30 seconds
+            
+            document.getElementById('autoBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'block';
+            log('Auto-send started (every 30s)');
+        });
+        
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            clearInterval(autoInterval);
+            document.getElementById('autoBtn').style.display = 'block';
+            document.getElementById('stopBtn').style.display = 'none';
+            log('Auto-send stopped');
+        });
+    </script>
+</body>
+</html>

@@ -35,6 +35,99 @@
             </div>
         </div>
         
+        <!-- Manuals Section -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Manuals</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('upload_vehicle_manual', id=vehicle.id) }}" enctype="multipart/form-data" class="mb-3">
+                    <div class="input-group">
+                        <input type="file" name="file" class="form-control" accept=".pdf" required>
+                        <button type="submit" class="btn btn-outline-primary">Upload PDF</button>
+                    </div>
+                    <small class="text-muted">Upload PDF manuals for AI-powered Q&A</small>
+                </form>
+                
+                {% set vehicle_manuals = manuals %}
+                {% if vehicle_manuals %}
+                    <div class="list-group list-group-flush">
+                    {% for manual in vehicle_manuals %}
+                        <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-file-earmark-pdf text-danger"></i>
+                                <a href="{{ url_for('serve_manual', filename=manual.filename) }}" target="_blank">{{ manual.original_name }}</a>
+                                <small class="text-muted">({{ manual.uploaded_at.strftime('%Y-%m-%d') }})</small>
+                            </div>
+                            <form method="POST" action="{{ url_for('delete_vehicle_manual', id=vehicle.id, manual_id=manual.id) }}" class="d-inline" onsubmit="return confirm('Delete this manual?');">
+                                <button type="submit" class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No manuals uploaded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Live Telemetry -->
+        {% if telemetry %}
+        <div class="card mb-4 border-success">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-speedometer2"></i> Live Telemetry</h5>
+                <small>{{ telemetry.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="metric-value">{{ telemetry.rpm or '--' }}</div>
+                        <div class="metric-label">RPM</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="metric-value">{{ telemetry.speed or '--' }}</div>
+                        <div class="metric-label">MPH</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="metric-value">{{ telemetry.fuel_level|int if telemetry.fuel_level else '--' }}%</div>
+                        <div class="metric-label">Fuel</div>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="metric-value">{{ telemetry.coolant_temp|int if telemetry.coolant_temp else '--' }}</div>
+                        <div class="metric-label">Coolant °F</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="metric-value">{{ telemetry.throttle|int if telemetry.throttle else '--' }}%</div>
+                        <div class="metric-label">Throttle</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="metric-value">{{ "%.1f"|format(telemetry.battery_voltage) if telemetry.battery_voltage else '--' }}V</div>
+                        <div class="metric-label">Battery</div>
+                    </div>
+                </div>
+                {% if telemetry.dtc_codes %}
+                <hr>
+                <div class="alert alert-warning">
+                    <strong>Error Codes:</strong> {{ telemetry.dtc_codes }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-speedometer2"></i> Live Telemetry</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">No telemetry data. Use the OBD2 phone app to send data.</p>
+                <a href="/obd2-app/" class="btn btn-primary">Open OBD2 App</a>
+            </div>
+        </div>
+        {% endif %}
+        
         <!-- Prediction -->
         {% if prediction %}
         <div class="card mb-4 border-info">

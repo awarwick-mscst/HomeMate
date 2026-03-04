@@ -120,7 +120,8 @@ class VehicleMaintenance(db.Model):
 
 class Manual(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    appliance_id = db.Column(db.Integer, db.ForeignKey('appliance.id'), nullable=False)
+    appliance_id = db.Column(db.Integer, db.ForeignKey('appliance.id'), nullable=True)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
     filename = db.Column(db.String(255), nullable=False)
     original_name = db.Column(db.String(255), nullable=False)
     extracted_text = db.Column(db.Text)
@@ -128,6 +129,19 @@ class Manual(db.Model):
 
     def __repr__(self):
         return f'<Manual {self.original_name}>'
+
+# Kept for backwards compatibility
+class VehicleManual(db.Model):
+    """Legacy - using Manual model now"""
+    id = db.Column(db.Integer, primary_key=True)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    original_name = db.Column(db.String(255), nullable=False)
+    extracted_text = db.Column(db.Text)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<VehicleManual {self.original_name}>'
 
 class HomeTask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -162,5 +176,26 @@ class Home(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     address = db.Column(db.Text)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class VehicleTelemetry(db.Model):
+    """OBD2 telemetry data from phone app"""
+    id = db.Column(db.Integer, primary_key=True)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Live metrics
+    rpm = db.Column(db.Integer)
+    speed = db.Column(db.Integer)  # mph
+    coolant_temp = db.Column(db.Float)  # Fahrenheit
+    throttle = db.Column(db.Float)  # percentage
+    fuel_level = db.Column(db.Float)  # percentage
+    battery_voltage = db.Column(db.Float)
+    dtc_codes = db.Column(db.String(255))  # Diagnostic Trouble Codes
+    
+    # Calculated
+    mileage = db.Column(db.Float)  # miles from odometer
+    
+    def __repr__(self):
+        return f'<VehicleTelemetry {self.vehicle_id} {self.timestamp}>'
 
 from datetime import timedelta

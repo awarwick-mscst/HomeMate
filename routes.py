@@ -1,6 +1,6 @@
 from app import app, db
-from flask import render_template, request, redirect, url_for, flash, jsonify, send_from_directory
-from models import Appliance, Maintenance, Manual, Vehicle, VehicleMaintenance, HomeTask, HomeTaskHistory, Home
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_from_directory, send_file
+from models import Appliance, Maintenance, Manual, Vehicle, VehicleMaintenance, HomeTask, HomeTaskHistory, Home, VehicleTelemetry
 from datetime import datetime, date, timedelta
 import os
 from ai_helper import extract_text_from_pdf, query_ollama
@@ -151,7 +151,9 @@ def add_vehicle():
 def view_vehicle(id):
     vehicle = Vehicle.query.get_or_404(id)
     prediction = vehicle.get_prediction()
-    return render_template('vehicle_view.html', vehicle=vehicle, prediction=prediction)
+    manuals = Manual.query.filter_by(vehicle_id=id).all()
+    telemetry = VehicleTelemetry.query.filter_by(vehicle_id=id).order_by(VehicleTelemetry.timestamp.desc()).first()
+    return render_template('vehicle_view.html', vehicle=vehicle, prediction=prediction, manuals=manuals, telemetry=telemetry)
 
 @app.route('/vehicle/<int:id>/edit', methods=['GET', 'POST'])
 def edit_vehicle(id):
@@ -386,6 +388,49 @@ def delete_manual(id, manual_id):
     flash('Manual deleted.', 'success')
     return redirect(url_for('view_appliance', id=id))
 
+# --- Vehicle Manual Upload ---
+@app.route('/vehicle/<int:id>/manual/upload', methods=['POST'])
+def upload_vehicle_manual(id):
+    vehicle = Vehicle.query.get_or_404(id)
+    if 'file' not in request.files:
+        flash('No file selected', 'danger')
+        return redirect(url_for('view_vehicle', id=id))
+    
+    file = request.files['file']
+    if file.filename == '' or not file.filename.lower().endswith('.pdf'):
+        flash('Only PDF files are supported.', 'danger')
+        return redirect(url_for('view_vehicle', id=id))
+    
+    filename = f"{datetime.utcnow().timestamp()}_{file.filename}"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    
+    extracted_text = extract_text_from_pdf(filepath)
+    
+    manual = Manual(
+        vehicle_id=vehicle.id,
+        filename=filename,
+        original_name=file.filename,
+        extracted_text=extracted_text
+    )
+    db.session.add(manual)
+    db.session.commit()
+    
+    flash('Manual uploaded!', 'success')
+    return redirect(url_for('view_vehicle', id=id))
+
+@app.route('/vehicle/<int:id>/manual/<int:manual_id>/delete', methods=['POST'])
+def delete_vehicle_manual(id, manual_id):
+    manual = Manual.query.get_or_404(manual_id)
+    try:
+        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], manual.filename))
+    except:
+        pass
+    db.session.delete(manual)
+    db.session.commit()
+    flash('Manual deleted.', 'success')
+    return redirect(url_for('view_vehicle', id=id))
+
 @app.route('/uploads/<filename>')
 def serve_manual(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -451,9 +496,69 @@ Maintenance History:
             context += f", Parts: {record.parts}"
         context += "\n"
 
+    # Add manuals to context
+    manuals = Manual.query.filter_by(vehicle_id=id).all()
+    if manuals:
+        context += "\nManuals:\n"
+        for manual in manuals:
+            context += f"\n--- {manual.original_name} ---\n"
+            context += manual.extracted_text or "(No text extracted)"
+            context += "\n"
+
     answer = query_ollama(question, context)
     
     return jsonify({
         'question': question,
         'answer': answer
     })
+
+# --- OBD2 Telemetry API ---
+@app.route('/api/vehicle/<int:id>/telemetry', methods=['POST'])
+def receive_telemetry(id):
+    """Receive OBD2 telemetry from phone app"""
+    vehicle = Vehicle.query.get_or_404(id)
+    data = request.get_json()
+    
+    telemetry = VehicleTelemetry(
+        vehicle_id=id,
+        rpm=data.get('rpm'),
+        speed=data.get('speed'),
+        coolant_temp=data.get('coolant_temp'),
+        throttle=data.get('throttle'),
+        fuel_level=data.get('fuel_level'),
+        battery_voltage=data.get('battery_voltage'),
+        dtc_codes=data.get('dtc_codes', ''),
+        mileage=data.get('mileage')
+    )
+    db.session.add(telemetry)
+    db.session.commit()
+    
+    return jsonify({'status': 'ok', 'id': telemetry.id})
+
+@app.route('/api/vehicle/<int:id>/telemetry/latest')
+def get_latest_telemetry(id):
+    """Get latest telemetry for a vehicle"""
+    telemetry = VehicleTelemetry.query.filter_by(vehicle_id=id).order_by(VehicleTelemetry.timestamp.desc()).first()
+    if not telemetry:
+        return jsonify({'error': 'No data'}), 404
+    
+    return jsonify({
+        'rpm': telemetry.rpm,
+        'speed': telemetry.speed,
+        'coolant_temp': telemetry.coolant_temp,
+        'throttle': telemetry.throttle,
+        'fuel_level': telemetry.fuel_level,
+        'battery_voltage': telemetry.battery_voltage,
+        'dtc_codes': telemetry.dtc_codes,
+        'mileage': telemetry.mileage,
+        'timestamp': telemetry.timestamp.isoformat()
+    })
+
+# --- OBD2 App ---
+@app.route('/obd2-app/')
+def obd2_app():
+    return send_file('static/obd2-app/index.html')
+
+@app.route('/obd2-app/<path:filename>')
+def obd2_static(filename):
+    return send_from_directory('static/obd2-app', filename)
